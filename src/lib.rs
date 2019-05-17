@@ -73,6 +73,59 @@ impl GlfwWindow {
             automatic_close: true,
         }
     }
+    
+    /// Creates a new game window for GLFW.
+    pub fn new_with_initialized(mut glfw: glfw::Glfw, settings: &WindowSettings) -> Result<GlfwWindow, Box<Error>> {
+        use glfw::{Context, SwapInterval};
+
+        let opengl = settings.get_maybe_opengl().unwrap_or(OpenGL::V3_2);
+        let (major, minor) = opengl.get_major_minor();
+
+        // Make sure we have the right GL version.
+        glfw.window_hint(glfw::WindowHint::ContextVersion(major as u32, minor as u32));
+        glfw.window_hint(glfw::WindowHint::Resizable(settings.get_resizable()));
+        glfw.window_hint(glfw::WindowHint::Decorated(settings.get_decorated()));
+        // Set sRGB.
+        glfw.window_hint(glfw::WindowHint::SRgbCapable(settings.get_srgb()));
+        if opengl >= OpenGL::V3_2 {
+            if cfg!(target_os = "macos") {
+                glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
+            }
+            glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+        }
+        if settings.get_samples() != 0 {
+            glfw.window_hint(glfw::WindowHint::Samples(Some(settings.get_samples() as u32)));
+        }
+
+        // Create GLFW window.
+        let (mut window, events) = glfw.create_window(
+            settings.get_size().width as u32,
+            settings.get_size().height as u32,
+            &settings.get_title(), glfw::WindowMode::Windowed
+        ).ok_or("Failed to create GLFW window.")?;
+        window.set_all_polling(true);
+        window.make_current();
+
+        if settings.get_vsync() {
+            glfw.set_swap_interval(SwapInterval::Sync(1));
+        } else {
+            glfw.set_swap_interval(SwapInterval::None);
+        }
+
+        // Load the OpenGL function pointers.
+        gl::load_with(|s| window.get_proc_address(s) as *const _);
+
+        Ok(GlfwWindow {
+            window: window,
+            events: events,
+            glfw: glfw,
+            event_queue: VecDeque::new(),
+            last_mouse_pos: None,
+            title: settings.get_title(),
+            exit_on_esc: settings.get_exit_on_esc(),
+            automatic_close: settings.get_automatic_close(),
+        })
+    }
 
     /// Creates a new game window for GLFW.
     pub fn new(settings: &WindowSettings) -> Result<GlfwWindow, Box<Error>> {
@@ -149,6 +202,10 @@ impl GlfwWindow {
                 glfw::WindowEvent::Key(key, scancode, glfw::Action::Press, _) => {
                     self.event_queue.push_back(
                         Input::Button(ButtonArgs {
+￼
+Commit changes
+Commit summary￼ Optional extended description
+
                             state: ButtonState::Press,
                             button: Button::Keyboard(glfw_map_key(key)),
                             scancode: Some(scancode as i32),
