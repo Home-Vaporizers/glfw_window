@@ -202,10 +202,6 @@ impl GlfwWindow {
                 glfw::WindowEvent::Key(key, scancode, glfw::Action::Press, _) => {
                     self.event_queue.push_back(
                         Input::Button(ButtonArgs {
-￼
-Commit changes
-Commit summary￼ Optional extended description
-
                             state: ButtonState::Press,
                             button: Button::Keyboard(glfw_map_key(key)),
                             scancode: Some(scancode as i32),
